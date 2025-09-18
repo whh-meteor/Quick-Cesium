@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cesium in QML</title>
+  <style>html,body,#cesiumContainer{width:100%;height:100%;margin:0;padding:0;overflow:hidden}</style>
+  <link href="Cesium/Widgets/widgets.css" rel="stylesheet" onerror="this.remove()"/>
+  <script>
+    (function(){
+      const localCandidate = 'Cesium/Cesium.js';
+      const cdnCandidates = [
+        'https://unpkg.com/cesium/Build/Cesium/Cesium.js',
+        'https://cdn.jsdelivr.net/npm/cesium/Build/Cesium/Cesium.js',
+        'https://registry.npmmirror.com/cesium/latest/files/Build/Cesium/Cesium.js'
+      ];
+
+      function setBaseUrlFrom(src){
+        try { window.CESIUM_BASE_URL = src.replace(/\/Cesium\.js$/, '/'); } catch(e) {}
+      }
+
+      function initCesium(){
+        try {
+    
+          const viewer = new Cesium.Viewer('cesiumContainer',{
+            baseLayerPicker: false,
+            animation:false,
+            timeline:false,
+            geocoder:false,
+            homeButton:true,
+            sceneModePicker:true,
+            navigationHelpButton:false,
+            infoBox:false,
+            selectionIndicator:false
+          });
+           viewer.imageryLayers.remove(viewer.imageryLayers.get(0));
+          viewer.scene.globe.depthTestAgainstTerrain = true;
+           viewer.imageryLayers.addImageryProvider(
+                new Cesium.UrlTemplateImageryProvider({
+                    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
+                })
+            );
+        } catch(e) { console.error('初始化 Cesium 失败:', e); }
+      }
+
+      function tryLoad(src, onFail){
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = function(){ setBaseUrlFrom(src); initCesium(); };
+        s.onerror = function(){ onFail && onFail(); };
+        document.head.appendChild(s);
+      }
+
+      // 先尝试本地
+      tryLoad(localCandidate, function(){
+        // 本地失败则轮询 CDN
+        let i = 0;
+        (function next(){
+          if (i >= cdnCandidates.length) { console.error('Cesium JS 加载失败'); return; }
+          tryLoad(cdnCandidates[i++], next);
+        })();
+      });
+    })();
+  </script>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+</body>
+</html>
